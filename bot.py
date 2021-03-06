@@ -11,7 +11,7 @@ from keyboard import menu_keyboard, inline_keyboard
 
 # from configparser import ConfigParser
 
-TOKEN = '5bd6650a801b74b75e250052f3c1cb63653ae72f6a791570545a2d6a3e0026db5e6fb84a1f8b532d7df17'
+TOKEN = 'token'
 vk_session = vk_api.VkApi(token=TOKEN)
 vk_upload = VkUpload(vk_session)
 longpoll = VkBotLongPoll(vk_session, 193110116)
