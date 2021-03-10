@@ -43,25 +43,18 @@ bad_words = ['хуй', 'хуе', 'хуё', 'пизда', 'пизд', 'пидр',
 # Функция отправки сообщения от лица бота
 def sender(cht_id, text, fwd_mess=None, att=None, kb=None):
     attachments = []
+
     if att:
-        for i in range(len(att)):
-            get_images(att, i)
-            sleep(1)
-            upload_image = vk_upload.photo_messages(photos=fr'{os.getcwd()}/images/answer_{i}.jpg')[0]
-            attachments.append(f'photo{upload_image["owner_id"]}_{upload_image["id"]}')
+        attachments = get_images(att[0])
 
     vk_session.method('messages.send', {
         'chat_id': cht_id,
         'message': text,
         'random_id': 0,
         'forward_messages': [fwd_mess],
-        'attachment': ','.join(attachments),
+        'attachment': ','.join(attachments),  # ','.join(attachments)
         'keyboard': kb
     })
-
-    if att:
-        for i in range(len(att)):
-            os.remove(os.getcwd() + fr'/images/answer_{i}.jpg')
 
 
 def add_question(cht_id, needed_user_id, username, mess):
@@ -76,13 +69,20 @@ def add_question(cht_id, needed_user_id, username, mess):
 
 
 # Скачиваем картинку, которую отправил пользователь
-def get_images(data, index):
-    image = open(fr'{os.getcwd()}/images/answer_{index}.jpg', 'wb')
-    url = data[0]['photo']['sizes'][-1]['url']
+def get_images(data):
+    attachments = []
 
-    img = requests.get(url)
-    image.write(img.content)
-    image.close()
+    for data_list in data:
+        with open(fr'{os.getcwd()}/images/answer.jpg', 'wb') as image:
+            url = data_list['photo']['sizes'][-1]['url']
+            img = requests.get(url)
+            image.write(img.content)
+
+        upload_image = vk_upload.photo_messages(photos=fr'{os.getcwd()}/images/answer.jpg')[0]
+        attachments.append(f'photo{upload_image["owner_id"]}_{upload_image["id"]}')
+
+        os.remove(os.getcwd() + fr'/images/answer.jpg')
+    return attachments
 
 
 # Функция для ответа на вопрос ученика
@@ -126,7 +126,8 @@ while True:
                 # Находим название чата
                 chat = get_chat_name_by_id(chat_id)
 
-                current_message = event.object['message']
+                message_id = chat['items'][0]['last_message_id']
+                current_message = vk.messages.getById(message_ids=message_id)['items'][0]
 
                 # Управление чатом с вопросами
                 if chat_id == 1:
@@ -144,50 +145,61 @@ while True:
                         if "invalid literal for int() with base 10: '[club193110116|@change___it] " in str(e):
                             break
 
-                    if answering:
+                    if answering and 'Показать вопросы' not in msg:
+                        attach = []
                         if current_message['attachments'] is not None:
-                            attach = current_message['attachments']
-                        else:
-                            attach = None
-                        answer(answering_index, msg, attach)
+                            for i in range(len(current_message['attachments'])):
+                                attach.append(current_message['attachments'][i])
+
+                        message = msg.split('[club193110116|@change___it] ')[-1]
+
+                        answer(0, msg, [attach])
+                        del questions[0]
 
                     for index in range(len(questions) - 1):
                         q = f'\n\nБеседа: {get_chat_name_by_id(questions[index]["chat_id"])["items"][0]["chat_settings"]["title"]}' \
-                            f'\nИмя: {questions[index]["username"]}\nВопрос:\n"{questions[index]["text"]}"'
-                        questions_list.append(q)
+                            f'\nИмя: {questions[index]["username"]}\nВопрос:\n"{questions[index]["text"]}"\n\n'
+                        if q not in questions_list:
+                            questions_list.append(q)
 
                     if 'Показать вопросы' in msg:
                         if len(questions_list) == 0:
                             sender(1, 'Вопросов пока нет😊', kb=menu_keyboard)
                         else:
-                            sender(1, 'Список вопросов:' + '\n'.join(questions_list),
+                            question_phrase = ''
+                            for words in questions_list:
+                                question_phrase += words
+                            sender(1, 'Список вопросов:' + question_phrase,
                                    kb=inline_keyboard(len(questions_list)).get_keyboard())
 
                 # Отправка сообщения, в случае тега бота
-                try:
-                    if '@change___it' in msg and chat_id == 5 and 'Показать вопросы' not in msg:
-                        if current_message['attachments'] is not None:
-                            attach = current_message['attachments']
-                        else:
-                            attach = None
-                        message = msg.split('[club193110116|@change___it] ')[-1]
-                        question(user_id, user, message, attach)
+                # try:
+                if '@change___it' in msg and chat_id == 5:
+                    attach = []
+                    if current_message['attachments'] is not None:
+                        for i in range(len(current_message['attachments'])):
+                            attach.append(current_message['attachments'][i])
 
-                        add_question(chat_id, user_id, user, message)
+                    message = msg.split('[club193110116|@change___it] ')[-1]
+                    question(user_id, user, message, [attach])
 
-                    elif '@change___it' in msg and chat_id == 1 and 'Показать вопросы' not in msg:
-                        if current_message['attachments'] is not None:
-                            attach = current_message['attachments']
-                        else:
-                            attach = None
-                        message = msg.split('[club193110116|@change___it] ')[-1]
+                    add_question(chat_id, user_id, user, message)
 
-                        answer(0, msg, attach)
-                        del questions[0]
+                elif '@change___it' in msg and chat_id == 1 and 'Показать вопросы' not in msg:
 
-                except Exception as e:
-                    if 'list index out of range' in str(e):
-                        sender(1, 'Вопросов пока нет😊')
+                    attach = []
+                    if current_message['attachments'] is not None:
+                        for i in range(len(current_message['attachments'])):
+                            attach.append(current_message['attachments'][i])
+
+                    message = msg.split('[club193110116|@change___it] ')[-1]
+
+                    answer(0, msg, [attach])
+                    del questions[0]
+
+                # except Exception as e:
+                #     if 'list index out of range' in str(e):
+                #         sender(1, 'Вопросов пока нет😊')
 
                 # Проверка на мат
                 if chat_id != 1 and chat_id != 3:
