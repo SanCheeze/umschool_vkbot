@@ -23,14 +23,12 @@ questions_list = []
 
 vk = vk_session.get_api()
 
-bad_words = ['хуй', 'хуе', 'хуё', 'пизда', 'пизд', 'пидр',
-             'пидор', 'бляд', 'манда', 'блять', 'бля', 'блядь', 'мудак', 'залупа', 'еба', 'ёб']
+bad_words = ['some', 'bad', 'words']
 
 
 # Функция получения ID рабочих групп и bad_words
 # def parse():
-#     config = ConfigParser()
-#     config.read('data.ini')
+#     config = ConfigParser().read('data.ini')
 #     workgroups = config['WorkGroups']
 #     bad_words_ = config['BadWords']
 #
